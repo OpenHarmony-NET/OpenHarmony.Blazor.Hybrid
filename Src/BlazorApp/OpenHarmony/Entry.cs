@@ -35,13 +35,15 @@ public class Entry
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     public unsafe static napi_value Init(napi_env env, napi_value exports)
     {
-        var dotnetInterceptRequestName = Marshal.StringToHGlobalAnsi("dotnetInterceptRequest");
+        var interceptRequestRequestName = Marshal.StringToHGlobalAnsi("interceptRequest");
+        var createBlazorName   = Marshal.StringToHGlobalAnsi("createBlazor");
         Span<napi_property_descriptor> desc = [
-            new (){utf8name = (sbyte*)dotnetInterceptRequestName, name = default, method = &WebViewInterceptRequest, getter = default, setter = default, value = default,  attributes = napi_property_attributes.napi_default, data = null}
+            new (){utf8name = (sbyte*)interceptRequestRequestName, name = default, method = &WebViewInterceptRequest, getter = default, setter = default, value = default,  attributes = napi_property_attributes.napi_default, data = null},
+            new (){utf8name = (sbyte*)createBlazorName, name = default, method = &CreateBlazor, getter = default, setter = default, value = default,  attributes = napi_property_attributes.napi_default, data = null}
         ];
         fixed (napi_property_descriptor* p = desc)
         {
-            ace_napi.napi_define_properties(env, exports, 1, p);
+            ace_napi.napi_define_properties(env, exports, (ulong)desc.Length, p);
         }
         return exports;
     }
@@ -64,6 +66,43 @@ public class Entry
         return default;
     }
 
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    public unsafe static napi_value CreateBlazor(napi_env env, napi_callback_info info)
+    {
+        try
+        {
+
+            ulong argc = 1;
+            napi_value* args = stackalloc napi_value[1];
+            ace_napi.napi_get_cb_info(env, info, &argc, args, null, null);
+
+            if (BlazorController.TryGetValue(args[0], out var app) == false)
+            {
+                BlazorController.Add(args[0], App.Create());
+            }
+        } 
+        catch (Exception e)
+        {
+            Hilog.OH_LOG_ERROR(LogType.LOG_APP, "BlazorHybrid", "CreateBlazor Message :" + e.Message);
+            if (e.StackTrace != null)
+            {
+                Hilog.OH_LOG_ERROR(LogType.LOG_APP, "BlazorHybrid", "CreateBlazor StackTrace :" + e.StackTrace);
+            }
+            if (e.InnerException != null)
+            {
+                e = e.InnerException;
+                Hilog.OH_LOG_ERROR(LogType.LOG_APP, "BlazorHybrid", "CreateBlazor Message :" + e.Message);
+                if (e.StackTrace != null)
+                {
+                    Hilog.OH_LOG_ERROR(LogType.LOG_APP, "BlazorHybrid", "CreateBlazor StackTrace :" + e.StackTrace);
+                }
+            }
+        }
+
+        return default;
+    }
+
+    public static Dictionary<napi_value, BlazorWebview> BlazorController = new Dictionary<napi_value, BlazorWebview>();
 
 
 }

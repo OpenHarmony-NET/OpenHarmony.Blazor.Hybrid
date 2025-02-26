@@ -6,12 +6,13 @@
     <Nullable>enable</Nullable>
 	<PublishAot>true</PublishAot>
 	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-	<AssemblyName>libblazorapp</AssemblyName>
   </PropertyGroup>
 
 <ItemGroup>
-  <None Include="Properties\PublishProfiles\PublishAmd64.pubxml.user" />
-  <None Include="Properties\PublishProfiles\PublishArm64.pubxml.user" />
+  <Compile Remove="Properties\**" />
+  <Content Remove="Properties\**" />
+  <EmbeddedResource Remove="Properties\**" />
+  <None Remove="Properties\**" />
 </ItemGroup>
 	
   <ItemGroup>

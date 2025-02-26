@@ -1,0 +1,9 @@
+[submodule "ThirdParty/OpenHarmony.NDK.Bindings"]
+	path = ThirdParty/OpenHarmony.NDK.Bindings
+	url = https://github.com/OpenHarmony-NET/OpenHarmony.NDK.Bindings
+[submodule "ThirdParty/OpenHarmony.NET.Runtime"]
+	path = ThirdParty/OpenHarmony.NET.Runtime
+	url = https://github.com/OpenHarmony-NET/OpenHarmony.NET.Runtime
+[submodule "ThirdParty/PublishAotCross"]
+	path = ThirdParty/PublishAotCross
+	url = https://github.com/OpenHarmony-NET/PublishAotCross

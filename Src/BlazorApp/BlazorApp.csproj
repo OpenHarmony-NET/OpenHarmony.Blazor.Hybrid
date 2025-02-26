@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+<PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+	<PublishAot>true</PublishAot>
+	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	<AssemblyName>libblazorapp</AssemblyName>
+  </PropertyGroup>
+
+<ItemGroup>
+  <None Include="Properties\PublishProfiles\PublishAmd64.pubxml.user" />
+  <None Include="Properties\PublishProfiles\PublishArm64.pubxml.user" />
+</ItemGroup>
+	
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="9.0.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="9.0.2" />
+	 <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.2" />
+  </ItemGroup>
+	
+  <ItemGroup>
+    <ProjectReference Include="..\..\ThirdParty\OpenHarmony.NDK.Bindings\OpenHarmony.NDK.Bindings\OpenHarmony.NDK.Bindings.csproj" />
+  </ItemGroup>
+	
+  <Import Project="../../ThirdParty/PublishAotCross/src/PublishAotCross.targets" />
+  <Import Project="../../ThirdParty/OpenHarmony.NET.Runtime/runtime.targets" />
+
+
+</Project>

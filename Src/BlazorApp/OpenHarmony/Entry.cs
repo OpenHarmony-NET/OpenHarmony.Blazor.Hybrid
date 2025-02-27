@@ -36,10 +36,12 @@ public class Entry
     public unsafe static napi_value Init(napi_env env, napi_value exports)
     {
         var interceptRequestRequestName = Marshal.StringToHGlobalAnsi("interceptRequest");
-        var createBlazorName   = Marshal.StringToHGlobalAnsi("createBlazor");
+        var createBlazorName = Marshal.StringToHGlobalAnsi("createBlazor");
+        var messageReceiveName = Marshal.StringToHGlobalAnsi("messageReceive");
         Span<napi_property_descriptor> desc = [
             new (){utf8name = (sbyte*)interceptRequestRequestName, name = default, method = &WebViewInterceptRequest, getter = default, setter = default, value = default,  attributes = napi_property_attributes.napi_default, data = null},
-            new (){utf8name = (sbyte*)createBlazorName, name = default, method = &CreateBlazor, getter = default, setter = default, value = default,  attributes = napi_property_attributes.napi_default, data = null}
+            new (){utf8name = (sbyte*)createBlazorName, name = default, method = &CreateBlazor, getter = default, setter = default, value = default,  attributes = napi_property_attributes.napi_default, data = null},
+            new (){utf8name = (sbyte*)messageReceiveName, name = default, method = &MessageReceive, getter = default, setter = default, value = default,  attributes = napi_property_attributes.napi_default, data = null}
         ];
         fixed (napi_property_descriptor* p = desc)
         {
@@ -54,16 +56,37 @@ public class Entry
     {
         ulong argc = 2;
         napi_value* args = stackalloc napi_value[2];
-        ace_napi.napi_get_cb_info(env, info, &argc, args, null, null);
+        if (ace_napi.napi_get_cb_info(env, info, &argc, args, null, null) != napi_status.napi_ok)
+        {
+            Hilog.OH_LOG_ERROR(LogType.LOG_APP, "BlazorHybrid", "WebViewInterceptRequest get cb info failed");
+            return default;
+        }
 
-        sbyte* urlData = stackalloc sbyte[1024];
-        ulong urlLength = default;
-        ace_napi.napi_get_value_string_utf8(env, args[1], urlData, 1024, &urlLength);
-        var url = Marshal.PtrToStringUTF8((nint)urlData);
+        string? url = null;
+        fixed (sbyte* urlData = data)
+        {
+            ulong urlLength = default;
+            if (ace_napi.napi_get_value_string_utf8(env, args[0], urlData, 1024, &urlLength) != napi_status.napi_ok)
+            {
+                Hilog.OH_LOG_ERROR(LogType.LOG_APP, "BlazorHybrid", "WebViewInterceptRequest url get failed");
+                return default;
+            }
+            url = Marshal.PtrToStringUTF8((nint)urlData);
+        }
 
-        Hilog.OH_LOG_DEBUG(LogType.LOG_APP, "BlazorHybrid", "WebViewInterceptRequest url :" + url);
+        if (url == null)
+        {
+            Hilog.OH_LOG_ERROR(LogType.LOG_APP, "BlazorHybrid", "WebViewInterceptRequest url is null");
+            return default;
+        }
 
-        return default;
+        if (webview == null)
+        {
+            Hilog.OH_LOG_ERROR(LogType.LOG_APP, "BlazorHybrid", "WebViewInterceptRequest app not found");
+            return default;
+        }
+
+        return webview.InterceptRequest(env, url, args[1]);
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
@@ -71,15 +94,11 @@ public class Entry
     {
         try
         {
-
-            ulong argc = 1;
-            napi_value* args = stackalloc napi_value[1];
+            ulong argc = 2;
+            napi_value* args = stackalloc napi_value[2];
             ace_napi.napi_get_cb_info(env, info, &argc, args, null, null);
 
-            if (BlazorController.TryGetValue(args[0], out var app) == false)
-            {
-                BlazorController.Add(args[0], App.Create());
-            }
+            webview = App.Create(env, args[0], args[1]);
         } 
         catch (Exception e)
         {
@@ -102,7 +121,47 @@ public class Entry
         return default;
     }
 
-    public static Dictionary<napi_value, BlazorWebview> BlazorController = new Dictionary<napi_value, BlazorWebview>();
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    public unsafe static napi_value MessageReceive(napi_env env, napi_callback_info info)
+    {
+        ulong argc = 1;
+        napi_value* args = stackalloc napi_value[1];
+        if (ace_napi.napi_get_cb_info(env, info, &argc, args, null, null) != napi_status.napi_ok)
+        {
+            Hilog.OH_LOG_ERROR(LogType.LOG_APP, "BlazorHybrid", "MessageReceive get cb info failed");
+            return default;
+        }
+
+        ulong messageLength = default;
+        string? message = null;
+        fixed (sbyte* messageData = data)
+        {
+            if (ace_napi.napi_get_value_string_utf8(env, args[0], messageData, (ulong)data.Length, &messageLength) != napi_status.napi_ok)
+            {
+                Hilog.OH_LOG_ERROR(LogType.LOG_APP, "BlazorHybrid", "MessageReceive message get failed");
+                return default;
+            }
+            message = Marshal.PtrToStringUTF8((nint)messageData);
+        }
+        if (message == null)
+        {
+            Hilog.OH_LOG_ERROR(LogType.LOG_APP, "BlazorHybrid", "MessageReceive message is null");
+            return default;
+        }
+
+        if (webview == null)
+        {
+            Hilog.OH_LOG_ERROR(LogType.LOG_APP, "BlazorHybrid", "MessageReceive app not found");
+            return default;
+        }
+
+        webview.MessageReceived(message);
+
+        return default;
+    }
+
+    static sbyte[] data = new sbyte[1024 * 1024];
+    static BlazorWebview? webview;
 
 
 }

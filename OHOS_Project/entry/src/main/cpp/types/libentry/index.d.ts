@@ -1,5 +1,7 @@
 import { webview} from '@kit.ArkWeb';
 
-export const interceptRequest: (webviewController: webview.WebviewController, url: string) => WebResourceResponse;
+export const interceptRequest: (url: string, createResponse: any) => object;
 
-export const createBlazor: (webviewController: webview.WebviewController) => void;
+export const createBlazor: (sendMessage: any, navigateCore: any) => void;
+
+export const messageReceive: (message: string) => void;

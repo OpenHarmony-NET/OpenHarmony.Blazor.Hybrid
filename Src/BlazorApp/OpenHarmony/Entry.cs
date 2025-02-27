@@ -38,10 +38,13 @@ public class Entry
         var interceptRequestRequestName = Marshal.StringToHGlobalAnsi("interceptRequest");
         var createBlazorName = Marshal.StringToHGlobalAnsi("createBlazor");
         var messageReceiveName = Marshal.StringToHGlobalAnsi("messageReceive");
+        var onFrameName = Marshal.StringToHGlobalAnsi("onFrame");
         Span<napi_property_descriptor> desc = [
             new (){utf8name = (sbyte*)interceptRequestRequestName, name = default, method = &WebViewInterceptRequest, getter = default, setter = default, value = default,  attributes = napi_property_attributes.napi_default, data = null},
             new (){utf8name = (sbyte*)createBlazorName, name = default, method = &CreateBlazor, getter = default, setter = default, value = default,  attributes = napi_property_attributes.napi_default, data = null},
-            new (){utf8name = (sbyte*)messageReceiveName, name = default, method = &MessageReceive, getter = default, setter = default, value = default,  attributes = napi_property_attributes.napi_default, data = null}
+            new (){utf8name = (sbyte*)messageReceiveName, name = default, method = &MessageReceive, getter = default, setter = default, value = default,  attributes = napi_property_attributes.napi_default, data = null},
+            new (){utf8name = (sbyte*)onFrameName, name = default, method = &OnFrame, getter = default, setter = default, value = default,  attributes = napi_property_attributes.napi_default, data = null}
+
         ];
         fixed (napi_property_descriptor* p = desc)
         {
@@ -157,6 +160,18 @@ public class Entry
 
         webview.MessageReceived(message);
 
+        return default;
+    }
+
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+
+    public unsafe static napi_value OnFrame(napi_env env, napi_callback_info info)
+    {
+        if (webview != null)
+        {
+            webview.OnFrame();
+        }
         return default;
     }
 

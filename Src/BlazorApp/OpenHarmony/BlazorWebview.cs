@@ -21,19 +21,32 @@ public class BlazorWebview : WebViewManager
 
     public napi_value navigateCore;
 
+    public BlaozrDispatcher dispatcher;
+
     const string Scheme = "https";
     static readonly Uri BaseUri = new($"{Scheme}://localhost/");
     const string hostPageRelativePath = "index.html";
-    public BlazorWebview(IServiceProvider provider, IFileProvider fileProvider, napi_env env, napi_value sendMessage, napi_value navigateCore)
-        : base(provider, Dispatcher.CreateDefault(), BaseUri, fileProvider, new(), hostPageRelativePath)
+    public BlazorWebview(IServiceProvider provider, BlaozrDispatcher dispatcher, IFileProvider fileProvider, napi_env env, napi_value sendMessage, napi_value navigateCore)
+        : base(provider, dispatcher, BaseUri, fileProvider, new(), hostPageRelativePath)
     {
+        this.dispatcher = dispatcher;
         this.Env = env;
         this.sendMessage= sendMessage;
         this.navigateCore = navigateCore;
 
-         AddRootComponentAsync(typeof(Routes), "#app", ParameterView.Empty);
+        AddRootComponentAsync(typeof(Routes), "#app", ParameterView.Empty);
+        test();
     }
 
+
+    async void test()
+    {
+        for (int i = 0; i < 10; i++)
+        {
+            await Task.Delay(1000);
+            Hilog.OH_LOG_INFO(LogType.LOG_APP, "BlazorHybrid", "test dispatcher: " + i);
+        }
+    }
     public unsafe napi_value InterceptRequest(napi_env env, string url, napi_value createResponse)
     {
         if (this.TryGetResponseContent(url, false, out var statusCode, out var statusMessage, out var stream, out var headers))
@@ -136,6 +149,10 @@ public class BlazorWebview : WebViewManager
 
     }
 
+    public void OnFrame()
+    {
+        dispatcher.Tick();
+    }
     public void MessageReceived(string message)
     {
         Hilog.OH_LOG_INFO(LogType.LOG_APP, "BlazorHybrid", "MessageReceived: " + message);

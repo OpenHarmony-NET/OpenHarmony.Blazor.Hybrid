@@ -3,6 +3,7 @@ import hilog from '@ohos.hilog';
 import fs from '@ohos.file.fs';
 import  entry from 'libentry.so';
 import { buffer } from '@kit.ArkTS';
+import { displaySync } from '@kit.ArkGraphics2D';
 
 webview.once("webInited", () => {
 })
@@ -18,9 +19,23 @@ struct Index {
   baseUri: string = `${this.scheme}://localhost/`;
 
 
-
   aboutToAppear(): void {
     webview.WebviewController.setWebDebuggingAccess(true);
+
+    let backDisplaySync = displaySync.create();
+    let range : ExpectedFrameRateRange = {
+      expected: 10,
+      min:0,
+      max:120
+    };
+
+    backDisplaySync?.setExpectedFrameRateRange(range)
+    backDisplaySync.on("frame", (frameInfo: displaySync.IntervalInfo) => {
+      entry.onFrame()
+      // hilog.debug(0x0001, "BlazorHybrid", `frame call`);
+    });
+
+    backDisplaySync?.start()
   }
 
   build() {

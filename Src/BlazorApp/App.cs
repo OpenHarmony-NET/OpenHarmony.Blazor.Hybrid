@@ -9,7 +9,7 @@ namespace BlazorApp;
 
 public class App
 {
-    public static BlazorWebview Create(napi_env Env, napi_value sendMessage, napi_value navigateCore)
+    public static BlazorWebview Create(napi_env Env, napi_ref sendMessage, napi_ref navigateCore)
     {
 
         var serviceProvider = new ServiceCollection();
@@ -18,7 +18,20 @@ public class App
         {
         });
         var provider = serviceProvider.BuildServiceProvider();
-        var webview = new BlazorWebview(provider, new BlaozrDispatcher(), new PhysicalFileProvider("/data/storage/el1/bundle/entry/resources/resfile/wwwroot"), Env, sendMessage, navigateCore);
+        var contenRoot = "/data/storage/el1/bundle/entry/resources/resfile/wwwroot";
+        if (System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.X64)
+        {
+            contenRoot += "/x86_64";
+        }
+        else if (System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture == System.Runtime.InteropServices.Architecture.Arm64)
+        {
+            contenRoot += "/arm64-v8a";
+        }
+        else
+        {
+            throw new Exception("Unsupported Architecture");
+        }
+        var webview = new BlazorWebview(provider, new BlaozrDispatcher(), new PhysicalFileProvider(contenRoot), Env, sendMessage, navigateCore);
 
         Hilog.OH_LOG_DEBUG(LogType.LOG_APP, "BlazorHybrid", "App Create");
 

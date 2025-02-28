@@ -7,6 +7,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json;
 using System.Text.Unicode;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 // using OpenHarmony.NDK.Bindings.Native;
@@ -17,16 +18,16 @@ public class BlazorWebview : WebViewManager
 {
     public napi_env Env;
 
-    public napi_value sendMessage;
+    public napi_ref sendMessage;
 
-    public napi_value navigateCore;
+    public napi_ref navigateCore;
 
     public BlaozrDispatcher dispatcher;
 
     const string Scheme = "https";
     static readonly Uri BaseUri = new($"{Scheme}://localhost/");
     const string hostPageRelativePath = "index.html";
-    public BlazorWebview(IServiceProvider provider, BlaozrDispatcher dispatcher, IFileProvider fileProvider, napi_env env, napi_value sendMessage, napi_value navigateCore)
+    public BlazorWebview(IServiceProvider provider, BlaozrDispatcher dispatcher, IFileProvider fileProvider, napi_env env, napi_ref sendMessage, napi_ref navigateCore)
         : base(provider, dispatcher, BaseUri, fileProvider, new(), hostPageRelativePath)
     {
         this.dispatcher = dispatcher;
@@ -35,18 +36,9 @@ public class BlazorWebview : WebViewManager
         this.navigateCore = navigateCore;
 
         AddRootComponentAsync(typeof(Routes), "#app", ParameterView.Empty);
-        test();
     }
 
 
-    async void test()
-    {
-        for (int i = 0; i < 10; i++)
-        {
-            await Task.Delay(1000);
-            Hilog.OH_LOG_INFO(LogType.LOG_APP, "BlazorHybrid", "test dispatcher: " + i);
-        }
-    }
     public unsafe napi_value InterceptRequest(napi_env env, string url, napi_value createResponse)
     {
         if (this.TryGetResponseContent(url, false, out var statusCode, out var statusMessage, out var stream, out var headers))
@@ -124,7 +116,9 @@ public class BlazorWebview : WebViewManager
                 Hilog.OH_LOG_ERROR(LogType.LOG_APP, "BlazorHybrid", "NavigateCore create string failed, code: " + code);
             }
         }
-        code = ace_napi.napi_call_function(Env, default, navigateCore, 1, &url, default);
+        napi_value navigateCoreFun = default;
+        ace_napi.napi_get_reference_value(Env, navigateCore, &navigateCoreFun);
+        code = ace_napi.napi_call_function(Env, default, navigateCoreFun, 1, &url, default);
         if (code != napi_status.napi_ok)
         {
             Hilog.OH_LOG_ERROR(LogType.LOG_APP, "BlazorHybrid", "NavigateCore call function failed, code: " + code);
@@ -140,7 +134,10 @@ public class BlazorWebview : WebViewManager
         {
             ace_napi.napi_create_string_utf8(Env, (sbyte*)p, (ulong)data.Length, &msg);
         }
-        var code = ace_napi.napi_call_function(Env, default, sendMessage, 1, &msg, default);
+
+        napi_value sendMessageFun = default;
+        ace_napi.napi_get_reference_value(Env, navigateCore, &sendMessageFun);
+        var code = ace_napi.napi_call_function(Env, default, sendMessageFun, 1, &msg, default);
         if (code != napi_status.napi_ok)
         {
             Hilog.OH_LOG_ERROR(LogType.LOG_APP, "BlazorHybrid", "SendMessage call function failed code: " + code);

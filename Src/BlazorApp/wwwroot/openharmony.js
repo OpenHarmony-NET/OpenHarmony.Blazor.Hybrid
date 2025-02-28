@@ -1,29 +1,30 @@
 console.log("runJavaScript ok!");
 window.port2 = null;
-window.external.receiveMessage = (fun) => {
-    console.log("call window.external.receiveMessage");
-    if (window.port2 == null)
-    {
-        console.log("add receiveMessage event failed, port2 is null");
-        return;
-    }
-    window.port2.onmessage = fun;
-}
 
-window.external.sendMessage = (message) =>
-{
-    console.log("call window.external.sendMessage");
-    if (window.port2 == null)
+window.__receiveMessageCallbacks = [];
+
+window.external = {
+    receiveMessage: function (callback)
     {
-        console.log("sendMessage failed, port2 is null");
-        return;
+        window.__receiveMessageCallbacks.push(callback);
+    },
+    sendMessage: function (message)
+    {
+        window.port2.postMessage(message)
     }
-    window.port2.postMessage(message)
+
 }
+    
+
 window.addEventListener('message', (e) => {
     if(e.data === '__init_ports__') {
         console.log("receive message init port2");
         window.port2 = e.ports[0]
+
+        window.port2.onmessage = message => {
+            console.log("receive message from port2", message.data);
+            window.__receiveMessageCallbacks.forEach(callback => callback(message.data));
+        }
         Blazor.start();
     }
 })

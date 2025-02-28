@@ -101,7 +101,10 @@ public class Entry
             napi_value* args = stackalloc napi_value[2];
             ace_napi.napi_get_cb_info(env, info, &argc, args, null, null);
 
-            webview = App.Create(env, args[0], args[1]);
+            napi_ref sendMessage = default, navigateCore = default;
+            ace_napi.napi_create_reference(env, args[0], 1, &sendMessage);
+            ace_napi.napi_create_reference(env, args[0], 1, &navigateCore);
+            webview = App.Create(env, sendMessage, navigateCore);
         } 
         catch (Exception e)
         {
@@ -168,6 +171,7 @@ public class Entry
 
     public unsafe static napi_value OnFrame(napi_env env, napi_callback_info info)
     {
+
         if (webview != null)
         {
             webview.OnFrame();

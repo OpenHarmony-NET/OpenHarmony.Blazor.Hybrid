@@ -6,17 +6,10 @@
     <Nullable>enable</Nullable>
 	<PublishAot>true</PublishAot>
 	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	<JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
   </PropertyGroup>
 
-<ItemGroup>
-  <Compile Remove="Properties\**" />
-  <Content Remove="Properties\**" />
-  <EmbeddedResource Remove="Properties\**" />
-  <None Remove="Properties\**" />
-</ItemGroup>
-	
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="9.0.2" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="9.0.2" />
 	 <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.2" />
   </ItemGroup>
@@ -28,5 +21,25 @@
   <Import Project="../../ThirdParty/PublishAotCross/src/PublishAotCross.targets" />
   <Import Project="../../ThirdParty/OpenHarmony.NET.Runtime/runtime.targets" />
 
+	<ItemGroup>
+		<RdXmlFile Include="rd.xml" />
+	</ItemGroup>
 
+	<Target Name="CopywwwrootAfterBuild" AfterTargets="Publish">
+		<PropertyGroup>
+			<DestinationDir Condition="$(RuntimeIdentifier.Contains('linux-musl-arm64'))">../../OHOS_Project/AppScope/resources/resfile/wwwroot/arm64-v8a/</DestinationDir>
+			<DestinationDir Condition="$(RuntimeIdentifier.Contains('linux-musl-x64'))">../../OHOS_Project/AppScope/resources/resfile/wwwroot/x86_64/</DestinationDir>
+		</PropertyGroup>
+		
+		<MakeDir Directories="$(DestinationDir)" Condition="!Exists('$(DestinationDir)')" />
+		
+		<ItemGroup>
+			<wwwrootFiles Include="$(PublishDir)wwwroot\**\*.*" />
+		</ItemGroup>
+		<Message Importance="high" Text="Copying wwwroot files to $(DestinationDir)" />
+		
+		<Copy SourceFiles="@(wwwrootFiles)" DestinationFiles="@(wwwrootFiles->'$(DestinationDir)%(RecursiveDir)%(Filename)%(Extension)')" />
+
+		<RemoveDir Directories="$(PublishDir)wwwroot" />
+	</Target>
 </Project>

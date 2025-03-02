@@ -8,6 +8,7 @@ using System.Collections.ObjectModel;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.Unicode;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 // using OpenHarmony.NDK.Bindings.Native;
@@ -35,7 +36,7 @@ public class BlazorWebview : WebViewManager
         this.sendMessage= sendMessage;
         this.navigateCore = navigateCore;
 
-        AddRootComponentAsync(typeof(Routes), "#app", ParameterView.Empty);
+        AddRootComponentAsync(typeof(App), "#app", ParameterView.Empty);
     }
 
 
@@ -47,8 +48,10 @@ public class BlazorWebview : WebViewManager
             stream.CopyTo(ms);
             var contentmessage = ms.ToArray();
             var content = Encoding.UTF8.GetString(contentmessage);
+#if DEBUG
             Hilog.OH_LOG_DEBUG(LogType.LOG_APP, "BlazorHybrid", $"url: {url}, \nstatusCode: {statusCode}, statusMessage: {statusMessage}");
             Hilog.OH_LOG_DEBUG(LogType.LOG_APP, "BlazorHybrid", $"content: {content}");
+#endif
             napi_value* args = stackalloc napi_value[4];
 
             ace_napi.napi_create_int32(env, statusCode, args);
@@ -79,7 +82,9 @@ public class BlazorWebview : WebViewManager
             }
             else
             {
+#if DEBUG
                 Hilog.OH_LOG_DEBUG(LogType.LOG_APP, "BlazorHybrid", $"contentmessage.Length: {(ulong)contentmessage.Length}");
+#endif
                 for (int i = 0; i < contentmessage.Length; i++)
                 {
                     data[i] = contentmessage[i];
@@ -103,7 +108,9 @@ public class BlazorWebview : WebViewManager
     }
     protected unsafe override void NavigateCore(Uri absoluteUri)
     {
-        Hilog.OH_LOG_INFO(LogType.LOG_APP, "BlazorHybrid", "NavigateCore: " + absoluteUri.ToString());
+#if DEBUG
+        Hilog.OH_LOG_DEBUG(LogType.LOG_APP, "BlazorHybrid", "NavigateCore: " + absoluteUri.ToString());
+#endif
         var data = Encoding.UTF8.GetBytes(absoluteUri.ToString());
         napi_value url = default;
         napi_status code = default;
@@ -127,7 +134,18 @@ public class BlazorWebview : WebViewManager
 
     protected unsafe override void SendMessage(string message)
     {
-        Hilog.OH_LOG_INFO(LogType.LOG_APP, "BlazorHybrid", "SendMessage: " + message);
+        if (message.IndexOf("NotifyUnhandledException") >= 0)
+        {
+            var passToWebview = JsonSerializer.Deserialize("{" + message.Replace("__bwv", "\"__bwv\"") + "}", BlazorJsonContext.Default.PassToWebView);
+            if (passToWebview != null && passToWebview.Bwv != null && passToWebview.Bwv.Count >= 3 && passToWebview.Bwv[0] == "NotifyUnhandledException")
+            {
+                Hilog.OH_LOG_ERROR(LogType.LOG_APP, "BlazorHybrid", "UnhandledException Message: " + passToWebview.Bwv[1]);
+                Hilog.OH_LOG_ERROR(LogType.LOG_APP, "BlazorHybrid", "UnhandledException StackTrace: \n" + passToWebview.Bwv[2]);
+            }
+        }
+#if DEBUG
+        Hilog.OH_LOG_DEBUG(LogType.LOG_APP, "BlazorHybrid", "SendMessage: " + message);
+#endif
         var data = Encoding.UTF8.GetBytes(message.ToString());
         napi_value msg = default;
         fixed (void* p = data)
@@ -148,11 +166,35 @@ public class BlazorWebview : WebViewManager
 
     public void OnFrame()
     {
-        dispatcher.Tick();
+        try
+        {
+            dispatcher.Tick();
+        }
+        catch (Exception exception)
+        {
+            var exceptionMessage = JsonSerializer.Serialize(new PassToWebView
+            {
+                Bwv = ["NotifyUnhandledException", exception.Message, exception.StackTrace == null ? "" : exception.StackTrace.ToString()]
+
+            }, BlazorJsonContext.Default.PassToWebView);
+            SendMessage(exceptionMessage);
+        }
     }
     public void MessageReceived(string message)
     {
-        Hilog.OH_LOG_INFO(LogType.LOG_APP, "BlazorHybrid", "MessageReceived: " + message);
+#if DEBUG
+        Hilog.OH_LOG_DEBUG(LogType.LOG_APP, "BlazorHybrid", "MessageReceived: " + message);
+#endif
         MessageReceived(BaseUri, message);
     }
+}
+
+[JsonSerializable(typeof(PassToWebView))]
+internal partial class BlazorJsonContext : JsonSerializerContext
+{
+}
+class PassToWebView
+{
+    [JsonPropertyName("__bwv")]
+    public List<string> Bwv { get; set; } = new();
 }

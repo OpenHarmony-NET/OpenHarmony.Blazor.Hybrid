@@ -1,4 +1,6 @@
-﻿using OpenHarmony.NDK.Bindings.Native;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
+using OpenHarmony.NDK.Bindings.Native;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -104,7 +106,7 @@ public class Entry
             napi_ref sendMessage = default, navigateCore = default;
             ace_napi.napi_create_reference(env, args[0], 1, &sendMessage);
             ace_napi.napi_create_reference(env, args[0], 1, &navigateCore);
-            webview = App.Create(env, sendMessage, navigateCore);
+            webview = Create(env, sendMessage, navigateCore);
         } 
         catch (Exception e)
         {
@@ -182,5 +184,29 @@ public class Entry
     static sbyte[] data = new sbyte[1024 * 1024];
     static BlazorWebview? webview;
 
+    public static BlazorWebview Create(napi_env env, napi_ref sendMessage, napi_ref navigateCore)
+    {
 
+        var services = new ServiceCollection();
+
+        services.AddBlazorWebView();
+
+        var provider = services.BuildServiceProvider();
+
+        var contenRoot = "/data/storage/el1/bundle/entry/resources/resfile/wwwroot";
+
+        // 由于样式隔离的id每次都不一样，所以这里需要根据不同的架构选择不同的文件夹
+        if (RuntimeInformation.ProcessArchitecture == Architecture.X64)
+            contenRoot += "/x86_64";
+        else if (RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
+            contenRoot += "/arm64-v8a";
+        else
+            throw new Exception("Unsupported Architecture");
+
+        var webview = new BlazorWebview(provider, new BlaozrDispatcher(), new PhysicalFileProvider(contenRoot), env, sendMessage, navigateCore);
+#if DEBUG
+        Hilog.OH_LOG_DEBUG(LogType.LOG_APP, "BlazorHybrid", "App Create");
+#endif
+        return webview;
+    }
 }

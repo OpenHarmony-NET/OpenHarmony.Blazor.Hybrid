@@ -1,4 +1,4 @@
-﻿using BlazorApp.Components;
+﻿using BlazorApp;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.WebView;
 using Microsoft.Extensions.FileProviders;
@@ -36,7 +36,6 @@ public class BlazorWebview : WebViewManager
         this.sendMessage= sendMessage;
         this.navigateCore = navigateCore;
 
-        AddRootComponentAsync(typeof(App), "#app", ParameterView.Empty);
     }
 
 
